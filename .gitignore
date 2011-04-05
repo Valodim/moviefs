@@ -1,0 +1,14 @@
+*~
+*.out
+*.out.dir
+*.swp
+*.user
+
+*.orig
+
+*.pyc
+
+movies.db
+
+mountpoint
+build
