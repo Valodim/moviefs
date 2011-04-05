@@ -4,7 +4,7 @@ import db
 import itertools
 from stat import S_IFDIR
 from time import time
-import re
+import os
 
 class TitleFS(Operations):
     def __init__(self, pathbase, db):
@@ -45,11 +45,10 @@ class MovieFS(Operations):
         self.pathbase = pathbase
         self.db = db
 
-        self.dir_patterns = [
-            ( re.compile(r'/title(/[^/]*)?'),     TitleFS(pathbase, db) ),
-            ( re.compile(r'/director(/[^/]*)?'),  DirectorFS(pathbase, db) ),
-        ]
-        self.rootdir = [ 'title', 'director' ]
+        self.dir_patterns = {
+            'title':     TitleFS(pathbase, db),
+            'director':  DirectorFS(pathbase, db),
+        }
 
     def __call__(self, op, path, *args):
         ret = '[Unhandled Exception]'
@@ -60,11 +59,10 @@ class MovieFS(Operations):
                 ret = getattr(self, op)(path, *args)
             # for everything else, consult the seven wise regexes
             else:
-                for pattern in self.dir_patterns:
-                    if pattern[0].match(path):
-                        print '~>', pattern[1], op, path, repr(args)
-                        ret = getattr(pattern[1], op)(path.split('/'), *args)
-                        break
+                pieces = path.split('/')[1:]
+                if pieces[0] in self.dir_patterns:
+                    print '~>', self.dir_patterns[pieces[0]], op, path, repr(args)
+                    ret = getattr(self.dir_patterns[pieces[0]], op)(pieces, *args)
             return ret
         except OSError, e:
             ret = str(e)
@@ -81,7 +79,7 @@ class MovieFS(Operations):
         return st
 
     def readdir(self, path, fh):
-        return ['.', '..' ] + self.rootdir
+        return ['.', '..' ] + self.dir_patterns.keys()
 
 def mount(mountpoint, pathbase, db):
     fuse = FUSE(MovieFS(pathbase, db), mountpoint, foreground=True, nothreads=True)
