@@ -253,5 +253,5 @@ class MovieFS(Operations):
         return ['.', '..' ] + self.dir_patterns.keys()
 
 def mount(mountpoint, pathbase, db):
-    fuse = FUSE(MovieFS(pathbase, db), mountpoint, foreground=True, nothreads=True)
+    fuse = FUSE(MovieFS(pathbase, db), mountpoint, foreground=True, nothreads=True, allow_other=True)
 
