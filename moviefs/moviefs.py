@@ -106,7 +106,13 @@ class ActorFS(TwoLevelFS):
     def level_one(self, pieces):
         return list(x[0].encode() for x in self.db.query(db.Actor.name).all())
     def level_two(self, pieces):
-        return list(x[0].encode() for x in self.db.query(db.Movie.name).filter(db.Movie.actors.any(name=pieces[0])).all())
+        # the first level should be an actor
+        actor = self.db.query(db.Actor).filter_by(name=pieces[0]).first()
+        # it's not?!
+        if not actor:
+            raise OSError(ENOENT)
+        # it is. show a list of all his movies
+        return list(x.name.encode() for x in actor.movies)
 
 # can't use LoggingMixIn, because we overwrite __call__ ourself!
 class MovieFS(Operations):
