@@ -1,6 +1,6 @@
 MovieFS
 
-This is a fuse filesystem implemented in python that will, at some point, list
-movies from a database in a virtual directory structure.
+This is a fuse application implemented in python that will project a database
+of movies into a virtual filesystem.
 
 It's all very alpha and hardly of use, but feel free to look around.
