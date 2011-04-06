@@ -48,7 +48,14 @@ def main():
     parser.add_argument('file', nargs='*', help='movie files')
     args = parser.parse_args()
 
-    mode_mount(args)
+    mode = args.file[0]
+    args.file = args.file[1:]
+    if mode == 'add':
+        mode_add(args)
+    elif mode == 'mount':
+        mode_mount(args)
+    elif mode == 'init':
+        mode_init(args)
 
 if __name__ == '__main__':
     main()
