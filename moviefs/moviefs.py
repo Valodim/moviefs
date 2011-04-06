@@ -23,7 +23,7 @@ class BaseMovieFS(Operations):
     def readdir(self, pieces, fh):
         # shouldn't happen - this is typically the case handled by inheriting classes
         if len(pieces) == 0:
-            raise OSError(ENOENT)
+            raise OSError(ENOENT, '')
         else:
             # we have an actual movie selected here - just return its personal directory
             movie = self.db.query(db.Movie).filter_by(name=pieces[-1]).first()
@@ -32,7 +32,7 @@ class BaseMovieFS(Operations):
     def readlink(self, pieces):
         # need at least two levels for this to make sense: -2 is the movie dir, -1 is the filename
         if len(pieces) <= 1:
-            raise OSError(ENOENT)
+            raise OSError(ENOENT, '')
         else:
             # we have an actual movie selected here - just return its personal directory
             movie = self.db.query(db.Movie).filter_by(name=pieces[-2]).first()
@@ -70,7 +70,7 @@ class MultiLevelFS(BaseMovieFS):
     def readdir(self, pieces, fh):
         # we NEED the list of criteria!
         if self.level_one == None:
-            raise OSError(ENOTSUP)
+            raise OSError(ENOTSUP, '')
         if len(pieces) < len(self.levels):
             return self.levels[len(pieces)](self, pieces)
         else:
@@ -110,7 +110,7 @@ class GenreFS(MultiLevelFS):
         genre = self.db.query(db.Genre).filter_by(name=pieces[0]).first()
         # it's not?!
         if not genre:
-            raise OSError(ENOENT)
+            raise OSError(ENOENT, '')
         # it is. show a list of all his movies
         return list(x.name for x in genre.movies)
 
@@ -125,7 +125,7 @@ class ActorFS(MultiLevelFS):
         actor = self.db.query(db.Actor).filter_by(name=pieces[0]).first()
         # it's not?!
         if not actor:
-            raise OSError(ENOENT)
+            raise OSError(ENOENT, '')
         # it is. show a list of all his movies
         return list(x.name for x in actor.movies)
 
@@ -137,12 +137,12 @@ class YearFS(MultiLevelFS):
         years = list(str(x[0]) for x in self.db.query(db.Movie.year).all())
         print years
         if len(years) == 0:
-            raise OSError(ENOENT)
+            raise OSError(ENOENT, '')
         return years
     def level_two(self, pieces):
         movies = list(x[0] for x in self.db.query(db.Movie.name).filter_by(year=pieces[0]).all())
         if len(movies) == 0:
-            raise OSError(ENOENT)
+            raise OSError(ENOENT, '')
         return movies
 
     levels = [ level_one, level_two ]
@@ -181,7 +181,7 @@ class MovieFS(Operations):
                 pieces = list(x.decode('utf-8') for x in path.split('/')[1:])
                 if pieces[0] not in self.dir_patterns:
                     print '!>', op, path, repr(args)
-                    raise OSError(ENOENT)
+                    raise OSError(ENOENT, '')
                 print '~>', self.dir_patterns[pieces[0]], op, path, repr(args)
                 ret = getattr(self.dir_patterns[pieces[0]], op)(pieces[1:], *args)
             # do some encoding magic here
