@@ -36,7 +36,7 @@ class BaseMovieFS(Operations):
         if len(pieces) <= 1:
             raise OSError(ENOENT, '')
         else:
-            movie = db.movieFromCache(pieces[-1])
+            movie = db.movieFromCache(pieces[-2])
             # we have an actual movie selected here - just return its personal directory
             if not movie:
                 raise OSError(ENOENT, '')

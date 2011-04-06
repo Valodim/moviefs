@@ -133,7 +133,7 @@ class Movie(Base):
     get_or_create = staticmethod(get_or_create)
 
     def printinfo(self):
-        return """
+        return u"""
 {} ({})
 '{}'
 
@@ -156,9 +156,13 @@ Actors:
 
 movie_cache = { }
 def movieFromCache(queryname):
+    if queryname is None:
+        return None
     if queryname in movie_cache:
         return movie_cache[queryname]
-    movie_cache[queryname] = session.query(Movie).filter(or_(Movie.name==queryname, Movie.imdb_id==queryname)).first()
+    movie = session.query(Movie).filter(or_(Movie.name==queryname, Movie.imdb_id==queryname)).first()
+    movie_cache[movie.name] = movie
+    movie_cache[movie.imdb_id] = movie
     return movie_cache[queryname]
 
 def init():
