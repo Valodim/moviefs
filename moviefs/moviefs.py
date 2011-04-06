@@ -63,7 +63,7 @@ class TitleFS(BaseMovieFS):
         else:
             return super(TitleFS, self).readdir(pieces, fh)
 
-class TwoLevelFS(BaseMovieFS):
+class MultiLevelFS(BaseMovieFS):
     """
       This is a sub-filesystem type that has exactly one extra criteria for the movie,
       thus two levels.
@@ -77,15 +77,13 @@ class TwoLevelFS(BaseMovieFS):
         # we NEED the list of criteria!
         if self.level_one == None:
             raise OSError(ENOTSUP)
-        if len(pieces) == 0:
-            return self.level_one(pieces)
-        elif len(pieces) == 1:
-            return self.level_two(pieces)
+        if len(pieces) < len(self.levels):
+            return self.levels[len(pieces)](self, pieces)
         else:
-            return super(TwoLevelFS, self).readdir(pieces, fh)
+            return super(MultiLevelFS, self).readdir(pieces, fh)
 
     def getattr(self, pieces, fh=None):
-        if len(pieces) <= 2:
+        if len(pieces) <= len(self.levels):
             # top dir: it's a directory
             st = {
                 'st_mode': S_IFDIR | 0755,
@@ -102,7 +100,7 @@ class TwoLevelFS(BaseMovieFS):
             st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
             return st
 
-class ActorFS(TwoLevelFS):
+class ActorFS(MultiLevelFS):
     def level_one(self, pieces):
         return list(x[0].encode() for x in self.db.query(db.Actor.name).all())
     def level_two(self, pieces):
@@ -113,6 +111,8 @@ class ActorFS(TwoLevelFS):
             raise OSError(ENOENT)
         # it is. show a list of all his movies
         return list(x.name.encode() for x in actor.movies)
+
+    levels = [ level_one, level_two ]
 
 # can't use LoggingMixIn, because we overwrite __call__ ourself!
 class MovieFS(Operations):
