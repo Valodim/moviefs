@@ -101,6 +101,21 @@ class TitleFS(MultiLevelFS):
 
     levels = [ level_one ]
 
+class GenreFS(MultiLevelFS):
+    """ Simple two-level filesystem, shows a list of actors. """
+    def level_one(self, pieces):
+        return list(x[0] for x in self.db.query(db.Genre.name).all())
+    def level_two(self, pieces):
+        # the first level should be an actor
+        genre = self.db.query(db.Genre).filter_by(name=pieces[0]).first()
+        # it's not?!
+        if not genre:
+            raise OSError(ENOENT)
+        # it is. show a list of all his movies
+        return list(x.name for x in genre.movies)
+
+    levels = [ level_one, level_two ]
+
 class ActorFS(MultiLevelFS):
     """ Simple two-level filesystem, shows a list of actors. """
     def level_one(self, pieces):
@@ -145,6 +160,7 @@ class MovieFS(Operations):
         self.dir_patterns = {
             'title':     TitleFS(pathbase, db),
             'actor':     ActorFS(pathbase, db),
+            'genre':     GenreFS(pathbase, db),
             'year':      YearFS(pathbase, db),
         }
 
