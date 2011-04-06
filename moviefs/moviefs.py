@@ -27,7 +27,7 @@ class BaseMovieFS(Operations):
         else:
             # we have an actual movie selected here - just return its personal directory
             movie = self.db.query(db.Movie).filter_by(name=pieces[-1]).first()
-            return ['.', '..', os.path.basename(movie.path.encode()) ]
+            return ['.', '..', os.path.basename(movie.path) ]
 
     def readlink(self, pieces):
         # need at least two levels for this to make sense: -2 is the movie dir, -1 is the filename
@@ -36,7 +36,7 @@ class BaseMovieFS(Operations):
         else:
             # we have an actual movie selected here - just return its personal directory
             movie = self.db.query(db.Movie).filter_by(name=pieces[-2]).first()
-            return os.path.abspath( self.pathbase + '/' + movie.path ).encode()
+            return os.path.abspath( self.pathbase + '/' + movie.path )
 
     def getattr(self, pieces, fh=None):
         if len(pieces) <= 1:
@@ -97,14 +97,14 @@ class MultiLevelFS(BaseMovieFS):
 class TitleFS(MultiLevelFS):
     """ Trivial filesystem, just list by title and let BaseMovieFS handle all the rest. """
     def level_one(self, pieces):
-        return list(x[0].encode() for x in itertools.chain(self.db.query(db.Movie.name).all()))
+        return list(x[0] for x in itertools.chain(self.db.query(db.Movie.name).all()))
 
     levels = [ level_one ]
 
 class ActorFS(MultiLevelFS):
     """ Simple two-level filesystem, shows a list of actors. """
     def level_one(self, pieces):
-        return list(x[0].encode() for x in self.db.query(db.Actor.name).all())
+        return list(x[0] for x in self.db.query(db.Actor.name).all())
     def level_two(self, pieces):
         # the first level should be an actor
         actor = self.db.query(db.Actor).filter_by(name=pieces[0]).first()
@@ -112,7 +112,9 @@ class ActorFS(MultiLevelFS):
         if not actor:
             raise OSError(ENOENT)
         # it is. show a list of all his movies
-        return list(x.name.encode() for x in actor.movies)
+        return list(x.name for x in actor.movies)
+
+    levels = [ level_one, level_two ]
 
 class YearFS(MultiLevelFS):
     """ Simple two-level filesystem, shows a list of actors. """
@@ -160,12 +162,17 @@ class MovieFS(Operations):
                 ret = getattr(self, op)(path, *args)
             # for everything else, consult the seven wise regexes
             else:
-                pieces = path.split('/')[1:]
+                pieces = list(x.decode('utf-8') for x in path.split('/')[1:])
                 if pieces[0] not in self.dir_patterns:
-                    print '->', op, path, repr(args)
+                    print '!>', op, path, repr(args)
                     raise OSError(ENOENT)
                 print '~>', self.dir_patterns[pieces[0]], op, path, repr(args)
                 ret = getattr(self.dir_patterns[pieces[0]], op)(pieces[1:], *args)
+            # do some encoding magic here
+            if isinstance(ret, list):
+                ret = list(x.encode('utf-8') for x in ret)
+            elif isinstance(ret, str):
+                ret = str(ret).encode('utf-8')
             return ret
         except OSError, e:
             ret = str(e)
