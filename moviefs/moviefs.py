@@ -4,6 +4,7 @@ import db
 import itertools
 from stat import S_IFDIR, S_IFLNK
 from time import time
+from errno import *
 import os
 
 class BaseMovieFS(Operations):
@@ -145,9 +146,11 @@ class MovieFS(Operations):
             # for everything else, consult the seven wise regexes
             else:
                 pieces = path.split('/')[1:]
-                if pieces[0] in self.dir_patterns:
-                    print '~>', self.dir_patterns[pieces[0]], op, path, repr(args)
-                    ret = getattr(self.dir_patterns[pieces[0]], op)(pieces[1:], *args)
+                if pieces[0] not in self.dir_patterns:
+                    print '->', op, path, repr(args)
+                    raise OSError(ENOENT)
+                print '~>', self.dir_patterns[pieces[0]], op, path, repr(args)
+                ret = getattr(self.dir_patterns[pieces[0]], op)(pieces[1:], *args)
             return ret
         except OSError, e:
             ret = str(e)
