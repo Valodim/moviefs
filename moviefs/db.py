@@ -3,6 +3,8 @@ from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import ClauseElement
 
+from datetime import datetime
+
 engine = create_engine('sqlite:///movies.db', echo=True)
 Session = sessionmaker(bind=engine)
 session = Session()
@@ -26,6 +28,11 @@ movie_actors = Table('movie_actors', Base.metadata,
     Column('movie_id', Integer, ForeignKey('movies.id'))
 )
 
+movie_genres = Table('movie_genres', Base.metadata,
+    Column('genre_id', Integer, ForeignKey('genres.id')),
+    Column('movie_id', Integer, ForeignKey('movies.id'))
+)
+
 class Actor(Base):
     __tablename__ = 'actors'
 
@@ -46,9 +53,16 @@ class Genre(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(60))
+    url = Column(String(128))
 
-    def __init__(self, name, path):
+    def __init__(self, name, url):
         self.name = name
+        self.url = url
+
+    def get_or_create(name, url):
+        act, _ = get_or_create(Genre, name = name, defaults={ 'url': url })
+        return act
+    get_or_create = staticmethod(get_or_create)
 
     def __repr__(self):
        return "<Genre('%s')>" % (self.name)
@@ -59,20 +73,42 @@ class Movie(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(60))
     path = Column(String(128), unique=True)
+
+    released = Column(DateTime)
+    homepage = Column(String(128))
+    imdb_id = Column(String(16))
+    tagline = Column(String(256))
+
     res_x = Column(Integer)
     res_y = Column(Integer)
-    year = Column(DateTime)
+
+    runtime = Column(Integer)
+    budget = Column(Integer)
+    revenue = Column(Integer)
 
     actors = relationship('Actor', secondary=movie_actors, backref='movies')
+    genres = relationship('Genre', secondary=movie_genres, backref='movies')
 
     def __init__(self, id, path, info):
-        self.path = path
 
         self.id = id
+        self.path = path.decode('utf-8')
         self.name = info['movie']['name']
+
+        self.released = datetime.strptime(info['movie']['released'], '%Y-%m-%d')
+        self.homepage = info['movie']['homepage']
+        self.imdb_id = info['movie']['imdb_id']
+        self.tagline = info['movie']['tagline']
+
         self.res_x = int(info['attrs']['ID_VIDEO_WIDTH'])
         self.res_y = int(info['attrs']['ID_VIDEO_HEIGHT'])
+
+        self.runtime = int(info['movie']['runtime'])
+        self.budget = int(info['movie']['budget'])
+        self.revenue = int(info['movie']['revenue'])
+
         self.actors = session.query(Actor).filter(Actor.name.in_(x['name'] for x in info['movie']['cast']['actor'])).all()
+        self.genres = session.query(Genre).filter(Genre.name.in_(info['movie']['categories']['genre'].keys())).all()
 
     def get_or_create(id, path, info):
 
@@ -80,6 +116,10 @@ class Movie(Base):
         if instance:
             return instance
         else:
+            genres = [ ]
+            for genre in info['movie']['categories']['genre']:
+                Genre.get_or_create(genre, info['movie']['categories']['genre'][genre])
+
             actors = [ ]
             for actor in info['movie']['cast']['actor']:
                 Actor.get_or_create(actor['id'], actor['name'])
