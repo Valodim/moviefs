@@ -55,14 +55,6 @@ class BaseMovieFS(Operations):
             st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
             return st
 
-class TitleFS(BaseMovieFS):
-    """ Trivial filesystem, just list by title and let BaseMovieFS handle all the rest. """
-    def readdir(self, pieces, fh):
-        if len(pieces) == 0:
-            return list(x[0].encode() for x in itertools.chain(self.db.query(db.Movie.name).all()))
-        else:
-            return super(TitleFS, self).readdir(pieces, fh)
-
 class MultiLevelFS(BaseMovieFS):
     """
       This is a sub-filesystem type that has exactly one extra criteria for the movie,
@@ -99,6 +91,13 @@ class MultiLevelFS(BaseMovieFS):
             }
             st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
             return st
+
+class TitleFS(MultiLevelFS):
+    """ Trivial filesystem, just list by title and let BaseMovieFS handle all the rest. """
+    def level_one(self, pieces):
+        return list(x[0].encode() for x in itertools.chain(self.db.query(db.Movie.name).all()))
+
+    levels = [ level_one ]
 
 class ActorFS(MultiLevelFS):
     def level_one(self, pieces):
