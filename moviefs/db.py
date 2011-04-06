@@ -132,6 +132,25 @@ class Movie(Base):
             return movie
     get_or_create = staticmethod(get_or_create)
 
+    def printinfo(self):
+        return """
+{} ({})
+'{}'
+
+Genres: {}
+
+Released: {}
+Runtime: {} Minutes
+Homepage: {}
+Imdb id: {}
+
+Movie Resolution: {}x{}
+
+Actors:
+ - {}
+
+""".format(self.name, self.year, self.tagline, ', '.join(x.name for x in self.genres), self.released.strftime('%d. %B %Y'), self.runtime, self.homepage, self.imdb_id, self.res_x, self.res_y, '\n - '.join(x.name for x in self.actors) )
+
     def __repr__(self):
        return "<Movie('%s','%s')>" % (self.name, self.path)
 

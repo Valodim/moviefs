@@ -2,7 +2,7 @@ from fuse import FUSE, LoggingMixIn, Operations
 import db
 
 import itertools
-from stat import S_IFDIR, S_IFLNK
+from stat import S_IFREG, S_IFDIR, S_IFLNK
 from time import time
 from errno import *
 import os
@@ -26,18 +26,18 @@ class BaseMovieFS(Operations):
             raise OSError(ENOENT, '')
         else:
             # we have an actual movie selected here - just return its personal directory
-            movie = self.db.query(db.Movie).filter(or_(db.Movie.name==pieces[-1], db.Movie.imdb_id==pieces[-1])).first()
+            movie = db.movieFromCache(pieces[-1])
             if not movie:
                 raise OSError(ENOENT, '')
-            return ['.', '..', os.path.basename(movie.path) ]
+            return ['.', '..', os.path.basename(movie.path), 'info' ]
 
     def readlink(self, pieces):
         # need at least two levels for this to make sense: -2 is the movie dir, -1 is the filename
         if len(pieces) <= 1:
             raise OSError(ENOENT, '')
         else:
+            movie = db.movieFromCache(pieces[-1])
             # we have an actual movie selected here - just return its personal directory
-            movie = self.db.query(db.Movie).filter(or_(db.Movie.name==pieces[-2], db.Movie.imdb_id==pieces[-2])).first()
             if not movie:
                 raise OSError(ENOENT, '')
             return os.path.abspath( self.pathbase + '/' + movie.path )
@@ -51,6 +51,18 @@ class BaseMovieFS(Operations):
             }
             st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
             return st
+        elif pieces[-1] == 'info':
+            movie = db.movieFromCache(pieces[-2])
+            if movie is None:
+                raise OSError(ENOENT, '')
+            # otherwise, it's a symbolic link
+            st = {
+                'st_mode': S_IFREG | 0644,
+                'st_size': len(movie.printinfo()),
+                'st_nlink': 1,
+            }
+            st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
+            return st
         else:
             # otherwise, it's a symbolic link
             st = {
@@ -59,6 +71,12 @@ class BaseMovieFS(Operations):
             }
             st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
             return st
+
+    def read(self, pieces, size, offset, fh=None):
+        if len(pieces) <= 1 or pieces[-1] != 'info':
+            raise OSError(ENOENT, '')
+        movie = db.movieFromCache(pieces[-2])
+        return movie.printinfo()
 
 class MultiLevelFS(BaseMovieFS):
     """
@@ -90,13 +108,7 @@ class MultiLevelFS(BaseMovieFS):
             st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
             return st
         else:
-            # otherwise, it's a symbolic link
-            st = {
-                'st_mode': S_IFLNK | 0777,
-                'st_nlink': 1,
-            }
-            st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
-            return st
+            return super(MultiLevelFS, self).getattr(pieces, fh)
 
 class TitleFS(MultiLevelFS):
     """ Trivial filesystem, just list by title and let BaseMovieFS handle all the rest. """
