@@ -1,3 +1,4 @@
+from sqlalchemy import or_
 from fuse import FUSE, LoggingMixIn, Operations
 import db
 
@@ -26,7 +27,9 @@ class BaseMovieFS(Operations):
             raise OSError(ENOENT, '')
         else:
             # we have an actual movie selected here - just return its personal directory
-            movie = self.db.query(db.Movie).filter_by(name=pieces[-1]).first()
+            movie = self.db.query(db.Movie).filter(or_(db.Movie.name==pieces[-1], db.Movie.imdb_id==pieces[-1])).first()
+            if not movie:
+                raise OSError(ENOENT, '')
             return ['.', '..', os.path.basename(movie.path) ]
 
     def readlink(self, pieces):
@@ -35,7 +38,9 @@ class BaseMovieFS(Operations):
             raise OSError(ENOENT, '')
         else:
             # we have an actual movie selected here - just return its personal directory
-            movie = self.db.query(db.Movie).filter_by(name=pieces[-2]).first()
+            movie = self.db.query(db.Movie).filter(or_(db.Movie.name==pieces[-2], db.Movie.imdb_id==pieces[-2])).first()
+            if not movie:
+                raise OSError(ENOENT, '')
             return os.path.abspath( self.pathbase + '/' + movie.path )
 
     def getattr(self, pieces, fh=None):
@@ -101,6 +106,28 @@ class TitleFS(MultiLevelFS):
 
     levels = [ level_one ]
 
+class ImdbFS(MultiLevelFS):
+    """ Trivial filesystem, just list by title and let BaseMovieFS handle all the rest. """
+    def level_one(self, pieces):
+        return list(x[0] for x in itertools.chain(self.db.query(db.Movie.imdb_id).all()))
+
+    levels = [ level_one ]
+
+class RuntimeFS(MultiLevelFS):
+    """ Simple two-level filesystem, shows a list of actors. """
+    def level_one(self, pieces):
+        return list(str(x[0]*10) for x in self.db.query(db.Movie.runtime.op("/")(10)).distinct())
+    def level_two(self, pieces):
+        # the first level should be an actor
+        return list(x[0] for x in itertools.chain(self.db.query(db.Movie.name).filter(db.Movie.runtime.op("/")(10)==int(pieces[0])/10).all()))
+        # it's not?!
+        if not movies:
+            raise OSError(ENOENT, '')
+        # it is. show a list of all his movies
+        return list(x.name for x in movie)
+
+    levels = [ level_one, level_two ]
+
 class GenreFS(MultiLevelFS):
     """ Simple two-level filesystem, shows a list of actors. """
     def level_one(self, pieces):
@@ -162,6 +189,8 @@ class MovieFS(Operations):
             'actor':     ActorFS(pathbase, db),
             'genre':     GenreFS(pathbase, db),
             'year':      YearFS(pathbase, db),
+            'imdb':      ImdbFS(pathbase, db),
+            'runtime':   RuntimeFS(pathbase, db),
         }
 
     def __call__(self, op, path, *args):
