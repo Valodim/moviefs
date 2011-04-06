@@ -57,12 +57,13 @@ class BaseMovieFS(Operations):
 
 class MultiLevelFS(BaseMovieFS):
     """
-      This is a sub-filesystem type that has exactly one extra criteria for the movie,
-      thus two levels.
+      This is a sub-filesystem type that has exactly one extra criteria for the
+      movie, thus two levels.
 
       Stuff handled here in caps: /fstype/CRITERIA/moviedir/movieinfo
 
-      The only thing that differs in subclasses is the list of criteria and assorted movies.
+      The only thing that differs in subclasses is the list of criteria and
+      assorted movies.
     """
 
     def readdir(self, pieces, fh):
@@ -100,6 +101,7 @@ class TitleFS(MultiLevelFS):
     levels = [ level_one ]
 
 class ActorFS(MultiLevelFS):
+    """ Simple two-level filesystem, shows a list of actors. """
     def level_one(self, pieces):
         return list(x[0].encode() for x in self.db.query(db.Actor.name).all())
     def level_two(self, pieces):
@@ -115,6 +117,10 @@ class ActorFS(MultiLevelFS):
 
 # can't use LoggingMixIn, because we overwrite __call__ ourself!
 class MovieFS(Operations):
+    """
+    Top-Level movie filesystem, this is what gets mounted. This is mainly
+    plumbing to delegate calls down to the different sub-filesystems.
+    """
     def __init__(self, pathbase, db):
         self.pathbase = pathbase
         self.db = db
@@ -125,6 +131,11 @@ class MovieFS(Operations):
         }
 
     def __call__(self, op, path, *args):
+        """ Delegate calls down to the different file systems.
+            This function basically takes the first element of the requested
+            op's path, and hands down the op call to the associated sub fs
+            from the dir_patterns dict.
+        """
         ret = '[Unhandled Exception]'
         try:
             # root is the only directory we handle in this class
@@ -145,6 +156,7 @@ class MovieFS(Operations):
             print '<-', op, repr(ret)
 
     def getattr(self, path, fh=None):
+        """ This handles only the attributes of the root directory """
         st = {
             'st_mode': S_IFDIR | 0755,
             'st_nlink': 2,
@@ -153,6 +165,7 @@ class MovieFS(Operations):
         return st
 
     def readdir(self, path, fh):
+        """ This handles only the file listing of the root directory """
         return ['.', '..' ] + self.dir_patterns.keys()
 
 def mount(mountpoint, pathbase, db):
