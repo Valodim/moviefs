@@ -56,7 +56,7 @@ class BaseMovieFS(Operations):
             return st
 
 class TitleFS(BaseMovieFS):
-
+    """ Trivial filesystem, just list by title and let BaseMovieFS handle all the rest. """
     def readdir(self, pieces, fh):
         if len(pieces) == 0:
             return list(x[0].encode() for x in itertools.chain(self.db.query(db.Movie.name).all()))
@@ -64,35 +64,28 @@ class TitleFS(BaseMovieFS):
             return super(TitleFS, self).readdir(pieces, fh)
 
 class TwoLevelFS(BaseMovieFS):
-    """ This is a sub-filesystem that has exactly two more levels until the movie.
-      Stuff handled here in caps: /fstype/CRITERIA/MOVIE/moviedirectory
-      The only thing that differs here is the list of criteria and assorted movies.
     """
-    def __init__(self, pathbase, db):
-        self.pathbase = pathbase
-        self.db = db
+      This is a sub-filesystem type that has exactly one extra criteria for the movie,
+      thus two levels.
+
+      Stuff handled here in caps: /fstype/CRITERIA/moviedir/movieinfo
+
+      The only thing that differs in subclasses is the list of criteria and assorted movies.
+    """
 
     def readdir(self, pieces, fh):
         # we NEED the list of criteria!
         if self.level_one == None:
             raise OSError(ENOTSUP)
         if len(pieces) == 0:
-            return map(encode, self.level_one())
+            return self.level_one(pieces)
+        elif len(pieces) == 1:
+            return self.level_two(pieces)
         else:
-            # we have an actual movie selected here - just return its personal directory
-            movie = self.db.query(db.Movie).filter_by(name=pieces[1]).first()
-            return ['.', '..', os.path.basename(movie.path.encode()) ]
-
-    def readlink(self, pieces):
-        if len(pieces) == 0:
-            raise OSError(ENOENT)
-        else:
-            # we have an actual movie selected here - just return its personal directory
-            movie = self.db.query(db.Movie).filter_by(name=pieces[1]).first()
-            return os.path.abspath( self.pathbase + '/' + movie.path ).encode()
+            return super(TwoLevelFS, self).readdir(pieces, fh)
 
     def getattr(self, pieces, fh=None):
-        if len(pieces) <= 1:
+        if len(pieces) <= 2:
             # top dir: it's a directory
             st = {
                 'st_mode': S_IFDIR | 0755,
@@ -110,8 +103,10 @@ class TwoLevelFS(BaseMovieFS):
             return st
 
 class ActorFS(TwoLevelFS):
-    def level_one(self):
-        return list(x[0].encode() for x in self.db.query(db.Movie.name).all())
+    def level_one(self, pieces):
+        return list(x[0].encode() for x in self.db.query(db.Actor.name).all())
+    def level_two(self, pieces):
+        return list(x[0].encode() for x in self.db.query(db.Movie.name).filter(db.Movie.actors.any(name=pieces[0])).all())
 
 # can't use LoggingMixIn, because we overwrite __call__ ourself!
 class MovieFS(Operations):
