@@ -1,4 +1,3 @@
-from sqlalchemy import or_
 from fuse import FUSE, LoggingMixIn, Operations
 import db
 

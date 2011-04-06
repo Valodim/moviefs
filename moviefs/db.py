@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData, ForeignKey, DateTime
+from sqlalchemy import or_
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import ClauseElement
@@ -133,6 +134,13 @@ class Movie(Base):
 
     def __repr__(self):
        return "<Movie('%s','%s')>" % (self.name, self.path)
+
+movie_cache = { }
+def movieFromCache(queryname):
+    if queryname in movie_cache:
+        return movie_cache[queryname]
+    movie_cache[queryname] = session.query(Movie).filter(or_(Movie.name==queryname, Movie.imdb_id==queryname)).first()
+    return movie_cache[queryname]
 
 def init():
     Base.metadata.create_all(engine)
