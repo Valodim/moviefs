@@ -187,8 +187,12 @@ class MovieFS(Operations):
             # do some encoding magic here
             if isinstance(ret, list):
                 ret = list(x.encode('utf-8') for x in ret)
-            elif isinstance(ret, str):
-                ret = str(ret).encode('utf-8')
+            else:
+                try:
+                    ret = ret.encode('utf-8')
+                except AttributeError:
+                    pass
+
             return ret
         except OSError, e:
             ret = str(e)
