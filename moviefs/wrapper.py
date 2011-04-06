@@ -33,6 +33,8 @@ def mode_add(args):
         else:
             print "Width:", info['attrs']['ID_VIDEO_WIDTH'], "Height:", info['attrs']['ID_VIDEO_HEIGHT']
             info['movie'] =  info['movie'].info()
+            # for key in info['movie']:
+                # print key, ": ", info['movie'][key]
             movie = db.Movie.get_or_create(info['movie']['id'], os.path.relpath(fname, pathbase), info)
 
     db.session.commit()
