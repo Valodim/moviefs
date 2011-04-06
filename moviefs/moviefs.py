@@ -114,6 +114,20 @@ class ActorFS(MultiLevelFS):
         # it is. show a list of all his movies
         return list(x.name.encode() for x in actor.movies)
 
+class YearFS(MultiLevelFS):
+    """ Simple two-level filesystem, shows a list of actors. """
+    def level_one(self, pieces):
+        years = list(str(x[0]) for x in self.db.query(db.Movie.year).all())
+        print years
+        if len(years) == 0:
+            raise OSError(ENOENT)
+        return years
+    def level_two(self, pieces):
+        movies = list(x[0] for x in self.db.query(db.Movie.name).filter_by(year=pieces[0]).all())
+        if len(movies) == 0:
+            raise OSError(ENOENT)
+        return movies
+
     levels = [ level_one, level_two ]
 
 # can't use LoggingMixIn, because we overwrite __call__ ourself!
@@ -129,6 +143,7 @@ class MovieFS(Operations):
         self.dir_patterns = {
             'title':     TitleFS(pathbase, db),
             'actor':     ActorFS(pathbase, db),
+            'year':      YearFS(pathbase, db),
         }
 
     def __call__(self, op, path, *args):

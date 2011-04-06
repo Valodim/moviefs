@@ -75,6 +75,7 @@ class Movie(Base):
     path = Column(String(128), unique=True)
 
     released = Column(DateTime)
+    year = Column(Integer)
     homepage = Column(String(128))
     imdb_id = Column(String(16))
     tagline = Column(String(256))
@@ -96,6 +97,7 @@ class Movie(Base):
         self.name = info['movie']['name']
 
         self.released = datetime.strptime(info['movie']['released'], '%Y-%m-%d')
+        self.year = self.released.year
         self.homepage = info['movie']['homepage']
         self.imdb_id = info['movie']['imdb_id']
         self.tagline = info['movie']['tagline']
