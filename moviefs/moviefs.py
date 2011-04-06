@@ -6,21 +6,85 @@ from stat import S_IFDIR, S_IFLNK
 from time import time
 import os
 
-class TitleFS(Operations):
+class BaseMovieFS(Operations):
+    """
+      This base filesystem handles the last level, which is typically movies.
+      For any operation that is passed here, the last element of the path will
+      be treated as a movie name, exposing a directory with its info.
+
+      Stuff handled here in caps: /fstype/...[/...]/MOVIEDIR/MOVIEINFO
+
+    """
     def __init__(self, pathbase, db):
         self.pathbase = pathbase
         self.db = db
 
     def readdir(self, pieces, fh):
-        if len(pieces) == 1:
-            return list(x[0].encode() for x in self.db.query(db.Movie.name).all())
+        # shouldn't happen - this is typically the case handled by inheriting classes
+        if len(pieces) == 0:
+            raise OSError(ENOENT)
+        else:
+            # we have an actual movie selected here - just return its personal directory
+            movie = self.db.query(db.Movie).filter_by(name=pieces[-1]).first()
+            return ['.', '..', os.path.basename(movie.path.encode()) ]
+
+    def readlink(self, pieces):
+        # need at least two levels for this to make sense: -2 is the movie dir, -1 is the filename
+        if len(pieces) <= 1:
+            raise OSError(ENOENT)
+        else:
+            # we have an actual movie selected here - just return its personal directory
+            movie = self.db.query(db.Movie).filter_by(name=pieces[-2]).first()
+            return os.path.abspath( self.pathbase + '/' + movie.path ).encode()
+
+    def getattr(self, pieces, fh=None):
+        if len(pieces) <= 1:
+            # probably a directory.. either way, this is just here for convenience.
+            st = {
+                'st_mode': S_IFDIR | 0755,
+                'st_nlink': 2,
+            }
+            st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
+            return st
+        else:
+            # otherwise, it's a symbolic link
+            st = {
+                'st_mode': S_IFLNK | 0777,
+                'st_nlink': 1,
+            }
+            st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
+            return st
+
+class TitleFS(BaseMovieFS):
+
+    def readdir(self, pieces, fh):
+        if len(pieces) == 0:
+            return list(x[0].encode() for x in itertools.chain(self.db.query(db.Movie.name).all()))
+        else:
+            return super(TitleFS, self).readdir(pieces, fh)
+
+class TwoLevelFS(BaseMovieFS):
+    """ This is a sub-filesystem that has exactly two more levels until the movie.
+      Stuff handled here in caps: /fstype/CRITERIA/MOVIE/moviedirectory
+      The only thing that differs here is the list of criteria and assorted movies.
+    """
+    def __init__(self, pathbase, db):
+        self.pathbase = pathbase
+        self.db = db
+
+    def readdir(self, pieces, fh):
+        # we NEED the list of criteria!
+        if self.level_one == None:
+            raise OSError(ENOTSUP)
+        if len(pieces) == 0:
+            return map(encode, self.level_one())
         else:
             # we have an actual movie selected here - just return its personal directory
             movie = self.db.query(db.Movie).filter_by(name=pieces[1]).first()
             return ['.', '..', os.path.basename(movie.path.encode()) ]
 
     def readlink(self, pieces):
-        if len(pieces) == 1:
+        if len(pieces) == 0:
             raise OSError(ENOENT)
         else:
             # we have an actual movie selected here - just return its personal directory
@@ -28,7 +92,7 @@ class TitleFS(Operations):
             return os.path.abspath( self.pathbase + '/' + movie.path ).encode()
 
     def getattr(self, pieces, fh=None):
-        if len(pieces) <= 2:
+        if len(pieces) <= 1:
             # top dir: it's a directory
             st = {
                 'st_mode': S_IFDIR | 0755,
@@ -45,21 +109,9 @@ class TitleFS(Operations):
             st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
             return st
 
-class DirectorFS(Operations):
-    def __init__(self, pathbase, db):
-        self.pathbase = pathbase
-        self.db = db
-
-    def readdir(self, pieces, fh):
+class ActorFS(TwoLevelFS):
+    def level_one(self):
         return list(x[0].encode() for x in self.db.query(db.Movie.name).all())
-
-    def getattr(self, path, fh=None):
-        st = {
-            'st_mode': S_IFDIR | 0755,
-            'st_nlink': 2,
-        }
-        st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
-        return st
 
 # can't use LoggingMixIn, because we overwrite __call__ ourself!
 class MovieFS(Operations):
@@ -69,7 +121,7 @@ class MovieFS(Operations):
 
         self.dir_patterns = {
             'title':     TitleFS(pathbase, db),
-            'director':  DirectorFS(pathbase, db),
+            'actor':     ActorFS(pathbase, db),
         }
 
     def __call__(self, op, path, *args):
@@ -84,7 +136,7 @@ class MovieFS(Operations):
                 pieces = path.split('/')[1:]
                 if pieces[0] in self.dir_patterns:
                     print '~>', self.dir_patterns[pieces[0]], op, path, repr(args)
-                    ret = getattr(self.dir_patterns[pieces[0]], op)(pieces, *args)
+                    ret = getattr(self.dir_patterns[pieces[0]], op)(pieces[1:], *args)
             return ret
         except OSError, e:
             ret = str(e)
