@@ -134,7 +134,7 @@ class ActorFS(MultiLevelFS):
 class YearFS(MultiLevelFS):
     """ Simple two-level filesystem, shows a list of actors. """
     def level_one(self, pieces):
-        years = list(str(x[0]) for x in self.db.query(db.Movie.year).all())
+        years = list(str(x[0]) for x in self.db.query(db.Movie.year).distinct().all())
         print years
         if len(years) == 0:
             raise OSError(ENOENT, '')
