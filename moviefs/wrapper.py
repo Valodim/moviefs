@@ -40,8 +40,7 @@ def mode_add(args):
             # for key in info['movie']:
                 # print key, ": ", info['movie'][key]
             movie = db.Movie.get_or_create(info['movie']['id'], os.path.relpath(fname, pathbase), info)
-
-    db.session.commit()
+            db.session.commit()
 
 def mode_mount(args):
     moviefs.mount(args.file[0], pathbase, db.session)
