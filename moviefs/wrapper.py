@@ -33,6 +33,10 @@ def mode_add(args):
         else:
             print "Width:", info['attrs']['ID_VIDEO_WIDTH'], "Height:", info['attrs']['ID_VIDEO_HEIGHT']
             info['movie'] =  info['movie'].info()
+            if 'genre' not in info['movie']['categories']:
+                info['movie']['categories']['genre'] = { }
+            if 'actor' not in info['movie']['cast']:
+                info['movie']['cast']['actor'] = { }
             # for key in info['movie']:
                 # print key, ": ", info['movie'][key]
             movie = db.Movie.get_or_create(info['movie']['id'], os.path.relpath(fname, pathbase), info)

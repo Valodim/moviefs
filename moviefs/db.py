@@ -106,9 +106,9 @@ class Movie(Base):
         self.res_x = int(info['attrs']['ID_VIDEO_WIDTH'])
         self.res_y = int(info['attrs']['ID_VIDEO_HEIGHT'])
 
-        self.runtime = int(info['movie']['runtime'])
-        self.budget = int(info['movie']['budget'])
-        self.revenue = int(info['movie']['revenue'])
+        self.runtime = int(info['movie']['runtime']) if info['movie']['runtime'] is not None else None
+        self.budget = int(info['movie']['budget']) if info['movie']['budget'] is not None else None
+        self.revenue = int(info['movie']['revenue']) if info['movie']['revenue'] is not None else None
 
         self.actors = session.query(Actor).filter(Actor.name.in_(x['name'] for x in info['movie']['cast']['actor'])).all()
         self.genres = session.query(Genre).filter(Genre.name.in_(info['movie']['categories']['genre'].keys())).all()
