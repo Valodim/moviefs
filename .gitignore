@@ -9,6 +9,7 @@
 *.pyc
 
 movies.db
+movies.db-journal
 
 mountpoint
 build
