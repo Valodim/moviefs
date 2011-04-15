@@ -503,13 +503,30 @@ def findmovieinfo(fname):
             guessname, _, _ = guessname.partition(s)
     guessname = guessname.strip()
 
+    info = movieinfo(fname, guessname)
+    print "guessed name: ", info['guessname']
+
+    if info is None or len(info['movie']) == 0:
+        pieces = fname.split('/')
+        if len(fname) >= 2:
+            guessname = pieces[-2].replace('.', ' ').replace('-', ' ').replace('_',' ')
+            if guessname.find('[') >= 0:
+                guessname = guessname[0:guessname.find('[')]
+            for s in stopwords:
+                if guessname.find(s):
+                    guessname, _, _ = guessname.partition(s)
+            guessname = guessname.strip()
+            info = movieinfo(fname, guessname)
+            print "second guessed name: ", info['guessname']
+
     # get a name with proper info
     while True:
-        if guessname != '':
-            info = movieinfo(fname, guessname)
-            print "guessed name: ", info['guessname']
-        else:
-            info = None
+        if info is None or len(info['movie']) == 0:
+            if guessname != '':
+                info = movieinfo(fname, guessname)
+                print "guessed name: ", info['guessname']
+            else:
+                info = None
 
         if info is None or len(info['movie']) == 0:
             print "Could not find a title match!"
