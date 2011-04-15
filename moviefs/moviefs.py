@@ -29,7 +29,7 @@ class BaseMovieFS(Operations):
             movie = db.movieFromCache(pieces[-1])
             if not movie:
                 raise OSError(ENOENT, '')
-            return ['.', '..', os.path.basename(movie.path), 'info' ]
+            return ['.', '..', os.path.basename(movie.path).replace(os.sep, ' '), 'info' ]
 
     def readlink(self, pieces):
         # need at least two levels for this to make sense: -2 is the movie dir, -1 is the filename
@@ -94,7 +94,7 @@ class MultiLevelFS(BaseMovieFS):
         if self.level_one == None:
             raise OSError(ENOTSUP, '')
         if len(pieces) < len(self.levels):
-            return self.levels[len(pieces)](self, pieces)
+            return map(lambda x: x.replace(os.sep, '_'), self.levels[len(pieces)](self, pieces))
         else:
             return super(MultiLevelFS, self).readdir(pieces, fh)
 

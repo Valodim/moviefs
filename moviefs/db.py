@@ -160,8 +160,10 @@ def movieFromCache(queryname):
         return None
     if queryname in movie_cache:
         return movie_cache[queryname]
-    movie = session.query(Movie).filter(or_(Movie.name==queryname, Movie.imdb_id==queryname)).first()
-    movie_cache[movie.name] = movie
+    movie = session.query(Movie).filter(or_(Movie.name.like(queryname), Movie.imdb_id==queryname)).first()
+    if movie is None:
+        return None
+    movie_cache[queryname] = movie
     movie_cache[movie.imdb_id] = movie
     return movie_cache[queryname]
 
