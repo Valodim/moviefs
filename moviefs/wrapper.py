@@ -14,10 +14,14 @@ def mode_init(args):
 
 def mode_add(args):
 
+    i = 1
     for fname in args.file:
 
         print
         print "filename: ", fname
+
+        i += 1
+        print "processing file #", i
 
         if not os.access(fname, os.F_OK):
             print "error: file not found!"
