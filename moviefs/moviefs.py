@@ -121,7 +121,7 @@ class MultiLevelFS(BaseMovieFS):
             return st
         elif len(pieces) <= len(self.levels):
             # for all subdirectories..
-            for i in range(1, len(pieces)):
+            for i in range(0, len(pieces)):
                 # see if this entry exists in the dir cache
                 if pieces[i] not in self.cachedir(pieces[0:i]):
                     raise OSError(ENOENT, '')
