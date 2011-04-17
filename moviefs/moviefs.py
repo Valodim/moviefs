@@ -196,7 +196,6 @@ class YearFS(MultiLevelFS):
     """ Simple two-level filesystem, shows a list of actors. """
     def level_one(self, pieces):
         years = list(str(x[0]) for x in self.db.query(db.Movie.year).distinct())
-        print years
         if len(years) == 0:
             raise OSError(ENOENT, '')
         return years
@@ -237,15 +236,15 @@ class MovieFS(Operations):
         try:
             # root is the only directory we handle in this class
             if path == '/':
-                print '->', op, path, repr(args)
+                # print '->', op, path, repr(args)
                 ret = getattr(self, op)(path, *args)
             # for everything else, consult the seven wise regexes
             else:
                 pieces = list(x.decode('utf-8') for x in path.split('/')[1:])
                 if pieces[0] not in self.dir_patterns:
-                    print '!>', op, path, repr(args)
+                    # print '!>', op, path, repr(args)
                     raise OSError(ENOENT, '')
-                print '~>', self.dir_patterns[pieces[0]], op, path, repr(args)
+                # print '~>', self.dir_patterns[pieces[0]], op, path, repr(args)
                 ret = getattr(self.dir_patterns[pieces[0]], op)(pieces[1:], *args)
             # do some encoding magic here
             if isinstance(ret, list):
@@ -260,7 +259,8 @@ class MovieFS(Operations):
             ret = str(e)
             raise
         finally:
-            print '<-', op, repr(ret)
+            # print '<-', op, repr(ret)
+            pass
 
     def getattr(self, path, fh=None):
         """ This handles only the attributes of the root directory """
