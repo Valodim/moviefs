@@ -29,10 +29,30 @@ movie_actors = Table('movie_actors', Base.metadata,
     Column('movie_id', Integer, ForeignKey('movies.id'))
 )
 
+movie_directors = Table('movie_directors', Base.metadata,
+    Column('director_id', Integer, ForeignKey('directors.id')),
+    Column('movie_id', Integer, ForeignKey('movies.id'))
+)
+
 movie_genres = Table('movie_genres', Base.metadata,
     Column('genre_id', Integer, ForeignKey('genres.id')),
     Column('movie_id', Integer, ForeignKey('movies.id'))
 )
+
+class Director(Base):
+    __tablename__ = 'directors'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(60), unique=True)
+
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+
+    def get_or_create(id, name):
+        act, _ = get_or_create(Director, id = id, name = name)
+        return act
+    get_or_create = staticmethod(get_or_create)
 
 class Actor(Base):
     __tablename__ = 'actors'
@@ -89,6 +109,7 @@ class Movie(Base):
     revenue = Column(Integer)
 
     actors = relationship('Actor', secondary=movie_actors, backref='movies')
+    directors = relationship('Director', secondary=movie_directors, backref='movies')
     genres = relationship('Genre', secondary=movie_genres, backref='movies')
 
     def __init__(self, id, path, info):
@@ -111,6 +132,8 @@ class Movie(Base):
         self.revenue = int(info['movie']['revenue']) if info['movie']['revenue'] is not None else None
 
         self.actors = session.query(Actor).filter(Actor.name.in_(x['name'] for x in info['movie']['cast']['actor'])).all()
+        if 'director' in info['movie']['cast']:
+            self.directors = session.query(Director).filter(Director.name.in_(x['name'] for x in info['movie']['cast']['director'])).all()
         self.genres = session.query(Genre).filter(Genre.name.in_(info['movie']['categories']['genre'].keys())).all()
 
     def get_or_create(id, path, info):
@@ -122,6 +145,11 @@ class Movie(Base):
             genres = [ ]
             for genre in info['movie']['categories']['genre']:
                 Genre.get_or_create(genre, info['movie']['categories']['genre'][genre])
+
+            directors = [ ]
+            if 'director' in info['movie']['cast']:
+                for director in info['movie']['cast']['director']:
+                    Director.get_or_create(director['id'], director['name'])
 
             actors = [ ]
             for actor in info['movie']['cast']['actor']:

@@ -3,4 +3,13 @@ MovieFS
 This is a fuse application implemented in python that will project a database
 of movies into a virtual filesystem.
 
+Implemented filesystems:
+ - actor: list all actors with 3+ movies
+ - director: group movies by director
+ - genre: group movies by genre
+ - imdb: juts show all movies by imdb-id
+ - runtime: group movies by runtime, granularity of 10
+ - title: just show all movies by title
+ - year: group movies by year
+
 It's all very alpha and hardly of use, but feel free to look around.
