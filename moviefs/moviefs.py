@@ -89,18 +89,40 @@ class MultiLevelFS(BaseMovieFS):
       assorted movies.
     """
 
+    def __init__(self, *args):
+        BaseMovieFS.__init__(self, *args)
+        self.levelCache = { }
+
     def readdir(self, pieces, fh):
         # we NEED the list of criteria!
-        if self.level_one == None:
+        if len(self.levels) == 0:
             raise OSError(ENOTSUP, '')
         if len(pieces) < len(self.levels):
-            return map(lambda x: x.replace(os.sep, '_'), self.levels[len(pieces)](self, pieces))
+            return self.cachedir(pieces)
         else:
             return super(MultiLevelFS, self).readdir(pieces, fh)
 
+    def cachedir(self, pieces):
+        joined = '/'.join(pieces)
+        if joined not in self.levelCache:
+            self.levelCache[joined] = self.levels[len(pieces)](self, pieces)
+        return self.levelCache[joined]
+
     def getattr(self, pieces, fh=None):
-        if len(pieces) <= len(self.levels):
+        if len(pieces) == 0:
             # top dir: it's a directory
+            st = {
+                'st_mode': S_IFDIR | 0755,
+                'st_nlink': 2,
+            }
+            st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
+            return st
+        elif len(pieces) <= len(self.levels):
+            # for all subdirectories..
+            for i in range(1, len(pieces)):
+                # see if this entry exists in the dir cache
+                if pieces[i] not in self.cachedir(pieces[0:i]):
+                    raise OSError(ENOENT, '')
             st = {
                 'st_mode': S_IFDIR | 0755,
                 'st_nlink': 2,
@@ -113,24 +135,24 @@ class MultiLevelFS(BaseMovieFS):
 class TitleFS(MultiLevelFS):
     """ Trivial filesystem, just list by title and let BaseMovieFS handle all the rest. """
     def level_one(self, pieces):
-        return list(x[0] for x in itertools.chain(self.db.query(db.Movie.name)))
+        return list(x[0].replace(os.sep, '_') for x in itertools.chain(self.db.query(db.Movie.name)))
 
     levels = [ level_one ]
 
 class ImdbFS(MultiLevelFS):
     """ Trivial filesystem, just list by title and let BaseMovieFS handle all the rest. """
     def level_one(self, pieces):
-        return list(x[0] for x in itertools.chain(self.db.query(db.Movie.imdb_id)))
+        return list(x[0].replace(os.sep, '_') for x in itertools.chain(self.db.query(db.Movie.imdb_id)))
 
     levels = [ level_one ]
 
 class RuntimeFS(MultiLevelFS):
     """ Simple two-level filesystem, shows a list of actors. """
     def level_one(self, pieces):
-        return list(str(x[0]*10) for x in self.db.query(db.Movie.runtime.op("/")(10)).distinct())
+        return list(str(x[0]*10) for x in filter(lambda x: x[0] is not None, self.db.query(db.Movie.runtime.op("/")(10)).distinct()))
     def level_two(self, pieces):
         # the first level should be an actor
-        return list(x[0] for x in itertools.chain(self.db.query(db.Movie.name).filter(db.Movie.runtime.op("/")(10)==int(pieces[0])/10)))
+        return list(x[0].replace(os.sep, '_') for x in itertools.chain(self.db.query(db.Movie.name).filter(db.Movie.runtime.op("/")(10)==int(pieces[0])/10)))
         # it's not?!
         if not movies:
             raise OSError(ENOENT, '')
