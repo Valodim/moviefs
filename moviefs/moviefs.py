@@ -6,6 +6,7 @@ from stat import S_IFREG, S_IFDIR, S_IFLNK
 from time import time
 from errno import *
 import os
+import signal
 
 class BaseMovieFS(Operations):
     """
@@ -276,5 +277,6 @@ class MovieFS(Operations):
         return ['.', '..' ] + self.dir_patterns.keys()
 
 def mount(mountpoint, pathbase, db):
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     fuse = FUSE(MovieFS(pathbase, db), mountpoint, foreground=True, nothreads=True, allow_other=True)
 
