@@ -6,7 +6,7 @@ from sqlalchemy.sql.expression import ClauseElement
 
 from datetime import datetime
 
-engine = create_engine('sqlite:///movies.db', echo=True)
+engine = create_engine('sqlite:///movies.db') # echo=True)
 Session = sessionmaker(bind=engine)
 session = Session()
 
