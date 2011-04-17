@@ -28,7 +28,7 @@ class BaseMovieFS(Operations):
         else:
             # we have an actual movie selected here - just return its personal directory
             movie = db.movieFromCache(pieces[-1])
-            if not movie:
+            if not movie or movie is None:
                 raise OSError(ENOENT, '')
             return ['.', '..', os.path.basename(movie.path).replace(os.sep, ' '), 'info' ]
 
@@ -39,7 +39,7 @@ class BaseMovieFS(Operations):
         else:
             movie = db.movieFromCache(pieces[-2])
             # we have an actual movie selected here - just return its personal directory
-            if not movie:
+            if not movie or movie is None:
                 raise OSError(ENOENT, '')
             return os.path.abspath( self.pathbase + '/' + movie.path )
 
@@ -54,7 +54,7 @@ class BaseMovieFS(Operations):
             return st
         else:
             movie = db.movieFromCache(pieces[-2])
-            if movie is None:
+            if movie is None or movie is None:
                 raise OSError(ENOENT, '')
             if pieces[-1] == 'info':
                 # otherwise, it's a symbolic link
