@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData, ForeignKey, DateTime
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import ClauseElement

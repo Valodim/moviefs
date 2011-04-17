@@ -184,7 +184,7 @@ class GenreFS(MultiLevelFS):
 class ActorFS(MultiLevelFS):
     """ Simple two-level filesystem, shows a list of actors. """
     def level_one(self, pieces):
-        return list(x[0].replace(os.sep, '_') for x in self.db.query(db.Actor.name))
+        return list(x[0].replace(os.sep, '_') for x in self.db.query(db.Actor.name).join(db.movie_actors).group_by(db.Actor.id).having(db.func.count(db.Actor.id)>=3))
     def level_two(self, pieces):
         # the first level should be an actor
         actor = self.db.query(db.Actor).filter_by(name=pieces[0]).first()
