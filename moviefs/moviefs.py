@@ -162,7 +162,7 @@ class RuntimeFS(MultiLevelFS):
         if not movies:
             raise OSError(ENOENT, '')
         # it is. show a list of all his movies
-        return list(x.name for x in movie)
+        return list(x.name.replace(os.sep, '_') for x in movie)
 
     levels = [ level_one, level_two ]
 
@@ -177,7 +177,7 @@ class GenreFS(MultiLevelFS):
         if not genre:
             raise OSError(ENOENT, '')
         # it is. show a list of all his movies
-        return list(x.name for x in genre.movies)
+        return list(x.name.replace(os.sep, '_') for x in genre.movies)
 
     levels = [ level_one, level_two ]
 
@@ -192,7 +192,7 @@ class DirectorFS(MultiLevelFS):
         if not director:
             raise OSError(ENOENT, '')
         # it is. show a list of all his movies
-        return list(x.name for x in director.movies)
+        return list(x.name.replace(os.sep, '_') for x in director.movies)
 
     levels = [ level_one, level_two ]
 
@@ -207,7 +207,7 @@ class ActorFS(MultiLevelFS):
         if not actor:
             raise OSError(ENOENT, '')
         # it is. show a list of all his movies
-        return list(x.name for x in actor.movies)
+        return list(x.name.replace(os.sep, '_') for x in actor.movies)
 
     levels = [ level_one, level_two ]
 
