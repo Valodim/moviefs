@@ -51,26 +51,27 @@ class BaseMovieFS(Operations):
             }
             st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
             return st
-        elif pieces[-1] == 'info':
+        else:
             movie = db.movieFromCache(pieces[-2])
             if movie is None:
                 raise OSError(ENOENT, '')
-            # otherwise, it's a symbolic link
-            st = {
-                'st_mode': S_IFREG | 0644,
-                'st_size': len(movie.printinfo()),
-                'st_nlink': 1,
-            }
-            st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
-            return st
-        else:
-            # otherwise, it's a symbolic link
-            st = {
-                'st_mode': S_IFLNK | 0777,
-                'st_nlink': 1,
-            }
-            st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
-            return st
+            if pieces[-1] == 'info':
+                # otherwise, it's a symbolic link
+                st = {
+                    'st_mode': S_IFREG | 0644,
+                    'st_size': len(movie.printinfo()),
+                    'st_nlink': 1,
+                }
+                st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
+                return st
+            else:
+                # otherwise, it's a symbolic link
+                st = {
+                    'st_mode': S_IFLNK | 0777,
+                    'st_nlink': 1,
+                }
+                st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
+                return st
 
     def read(self, pieces, size, offset, fh=None):
         if len(pieces) <= 1 or pieces[-1] != 'info':
