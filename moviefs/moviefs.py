@@ -165,7 +165,7 @@ class RuntimeFS(MultiLevelFS):
 class GenreFS(MultiLevelFS):
     """ Simple two-level filesystem, shows a list of actors. """
     def level_one(self, pieces):
-        return list(x[0] for x in self.db.query(db.Genre.name))
+        return list(x[0].replace(os.sep, '_') for x in self.db.query(db.Genre.name))
     def level_two(self, pieces):
         # the first level should be an actor
         genre = self.db.query(db.Genre).filter_by(name=pieces[0]).first()
@@ -180,7 +180,7 @@ class GenreFS(MultiLevelFS):
 class ActorFS(MultiLevelFS):
     """ Simple two-level filesystem, shows a list of actors. """
     def level_one(self, pieces):
-        return list(x[0] for x in self.db.query(db.Actor.name))
+        return list(x[0].replace(os.sep, '_') for x in self.db.query(db.Actor.name))
     def level_two(self, pieces):
         # the first level should be an actor
         actor = self.db.query(db.Actor).filter_by(name=pieces[0]).first()
@@ -200,7 +200,7 @@ class YearFS(MultiLevelFS):
             raise OSError(ENOENT, '')
         return years
     def level_two(self, pieces):
-        movies = list(x[0] for x in self.db.query(db.Movie.name).filter_by(year=pieces[0]))
+        movies = list(x[0].replace(os.sep, '_') for x in self.db.query(db.Movie.name).filter_by(year=pieces[0]))
         if len(movies) == 0:
             raise OSError(ENOENT, '')
         return movies
