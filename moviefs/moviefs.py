@@ -65,7 +65,7 @@ class BaseMovieFS(Operations):
                 }
                 st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
                 return st
-            else:
+            elif pieces[-1] == os.path.basename(movie.path).replace(os.sep, ' '):
                 # otherwise, it's a symbolic link
                 st = {
                     'st_mode': S_IFLNK | 0777,
@@ -73,6 +73,9 @@ class BaseMovieFS(Operations):
                 }
                 st['st_ctime'] = st['st_mtime'] = st['st_atime'] = time()
                 return st
+            else:
+                raise OSError(ENOENT, '')
+
 
     def read(self, pieces, size, offset, fh=None):
         if len(pieces) <= 1 or pieces[-1] != 'info':
